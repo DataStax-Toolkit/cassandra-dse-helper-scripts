@@ -1,0 +1,11 @@
+DC: Analytics       Workload: Analytics       Graph: no     Analytics Master: 10.200.176.39
+==========================================================================================
+Status=Up/Down
+|/ State=Normal/Leaving/Joining/Moving
+--   Address          Load             Owns                 VNodes                                       Rack         Health [0,1]
+UN   10.200.176.39    1.58 GiB         ?                    8                                            rack1        1.00
+UN   10.200.176.4     1.58 GiB         ?                    8                                            rack1        1.00
+UN   10.200.176.40    1.58 GiB         ?                    8                                            rack1        1.00
+
+Note: you must specify a keyspace to get ownership information.
+Warning: dse_leases has only 1 replicas in the datacenter 'Analytics'; a single lease replica failure will prevent the SparkMaster from being elected. You should probably increase the replication factor by running the ALTER KEYSPACE command.

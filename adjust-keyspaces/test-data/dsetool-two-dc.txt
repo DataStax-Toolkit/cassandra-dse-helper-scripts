@@ -1,0 +1,19 @@
+DC: DC1             Workload: Cassandra       Graph: no
+======================================================
+Status=Up/Down
+|/ State=Normal/Leaving/Joining/Moving
+--   Address          Load             Owns                 VNodes                                       Rack         Health [0,1]
+UN   10.200.178.50    140.29 KiB       ?                    8                                            rack1        0.50
+UN   10.200.178.51    151.07 KiB       ?                    8                                            rack1        0.50
+UN   10.200.178.53    118.54 KiB       ?                    8                                            rack1        0.50
+
+DC: DC2             Workload: Cassandra       Graph: no
+======================================================
+Status=Up/Down
+|/ State=Normal/Leaving/Joining/Moving
+--   Address          Load             Owns                 VNodes                                       Rack         Health [0,1]
+UN   10.200.178.52    174.1 KiB        ?                    8                                            rack1        0.50
+UN   10.200.178.54    146.41 KiB       ?                    8                                            rack1        0.50
+UN   10.200.178.55    112.8 KiB        ?                    8                                            rack1        0.50
+
+Note: you must specify a keyspace to get ownership information.
