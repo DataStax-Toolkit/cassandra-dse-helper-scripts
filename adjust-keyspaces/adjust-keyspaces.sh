@@ -46,12 +46,23 @@ rm -f $CQL_FILE
 touch $CQL_FILE
 
 dsetool status > $DSETOOL_FILE
+RES=$?
+if [ $RES -ne 0 ] ; then
+    echo "Can't execute 'dsetool status'! Exit code: $?"
+    exit 1
+fi
+    
 if cat $DSETOOL_FILE|grep -e '^[UD][NJLM] '|grep -v -e '^UN ' > /dev/null 2>&1 ; then
     echo "Cluster has nodes with non-UN status, can't adjust replication factor!"
     exit 1
 fi
 
 cqlsh -e 'DESCRIBE FULL SCHEMA;' > $SCHEMA_FILE
+RES=$?
+if [ $RES -ne 0 ] ; then
+    echo "Can't get schema via cqlsh! Exit code: $?"
+    exit 1
+fi
 
 declare -A all_ks
 for i in `cat $SCHEMA_FILE|grep 'CREATE KEYSPACE'|grep -e 'SimpleStrategy\|NetworkTopologyStrategy'|sed -e 's|^CREATE KEYSPACE \([^ ]*\).*$|\1|'`; do
