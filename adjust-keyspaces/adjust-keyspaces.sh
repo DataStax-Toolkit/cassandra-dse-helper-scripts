@@ -114,7 +114,7 @@ else
     echo "Please execute command 'cqlsh -f $CQL_FILE' to adjust replication factor for keyspaces"
     echo "After that, execute following commands on each node of the cluster:"
     for i in "${to_repair[@]}" ; do
-        echo "nodetool repair $i"
+        echo "nodetool repair -pr $i"
     done
 fi
 
