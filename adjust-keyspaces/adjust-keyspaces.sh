@@ -138,7 +138,7 @@ if [ ${#to_repair[@]} -eq 0 ]; then
     echo "No keyspaces processed!"
     ret_code=1
 else
-    cat $CQL_FILE
+#    cat $CQL_FILE
     echo "Please execute command 'cqlsh -f $CQL_FILE' to adjust replication factor for keyspaces"
     echo "After that, execute following commands on each node of the cluster:"
     for i in "${to_repair[@]}" ; do
