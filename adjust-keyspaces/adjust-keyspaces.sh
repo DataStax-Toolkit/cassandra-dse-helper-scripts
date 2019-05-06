@@ -36,7 +36,7 @@ fi
 
 my_pid=$$
 
-DSETOOL_FILE=/tmp/dsetool-out-${my_pid}.txt
+NODETOOL_FILE=/tmp/nodetool-out-${my_pid}.txt
 SCHEMA_FILE=/tmp/cqlsh-schema-${my_pid}.txt
 TMP_FILE=/tmp/tmp-${my_pid}.txt
 
@@ -45,14 +45,14 @@ CQL_FILE=/tmp/fix-keyspaces-${my_pid}.cql
 rm -f $CQL_FILE
 touch $CQL_FILE
 
-dsetool status > $DSETOOL_FILE
+nodetool status > $NODETOOL_FILE
 RES=$?
 if [ $RES -ne 0 ] ; then
     echo "Can't execute 'dsetool status'! Exit code: $?"
     exit 1
 fi
     
-if cat $DSETOOL_FILE|grep -e '^[UD][NJLM] '|grep -v -e '^UN ' > /dev/null 2>&1 ; then
+if cat $NODETOOL_FILE|grep -e '^[UD][NJLM] '|grep -v -e '^UN ' > /dev/null 2>&1 ; then
     echo "Cluster has nodes with non-UN status, can't adjust replication factor!"
     exit 1
 fi
@@ -75,28 +75,45 @@ declare -A all_dcs
 curr_dc=''
 cnt=0
 while read -d $'\n' line ; do
-    if [ -z "$curr_dc" ] ; then
-        curr_dc=`echo "$line"|sed -e 's|^DC: \([^ ]*\) .*$|\1|'`
-        if [ -z "$curr_dc" ]; then
-            echo "Can't identify DC!"
-            break;
+#    echo "$line"
+    if echo "$line"|grep -e '^Datacenter: '  > /dev/null 2>&1 ; then
+        new_dc=`echo "$line"|sed -e 's|^Datacenter: \([^ ]*\).*$|\1|'`
+#        echo "new_dc=$new_dc"
+        if [ -z "$new_dc" ] ; then
+            echo "Can't extract DC from line '$line'"
+            exit 1
         fi
-    fi
-    if [ -z "$line" ] ; then
-        max_rf=$rep_factor
-        if [ $rep_factor -gt $cnt ]; then
-            max_rf=$cnt
+        if [ -z "$curr_dc" ] ; then
+            curr_dc=$new_dc
+        else
+            max_rf=$rep_factor
+            if [ $rep_factor -gt $cnt ]; then
+                max_rf=$cnt
+            fi
+            echo "$curr_dc has $cnt nodes max RF=$max_rf"
+            all_dcs[$curr_dc]=$max_rf
+            curr_dc=$new_dc
+            cnt=0
         fi
-        echo "$curr_dc has $cnt nodes max RF=$max_rf"
-        all_dcs[$curr_dc]=$max_rf
-        curr_dc=''
-        cnt=0
     fi
     if echo "$line"|grep -e '^[UD][NJLM] ' > /dev/null 2>&1 ; then
         ((cnt++))
     fi
-done < $DSETOOL_FILE
+done < $NODETOOL_FILE
+# push the last DC as well
+max_rf=$rep_factor
+if [ $rep_factor -gt $cnt ]; then
+    max_rf=$cnt
+fi
+echo "$curr_dc has $cnt nodes max RF=$max_rf"
+all_dcs[$curr_dc]=$max_rf
+
 #echo "All DCs=${!all_dcs[@]}"
+if [ ${#all_dcs[@]} -eq 0 ]; then
+    echo "Can't identify data centers!"
+    exit 1
+fi
+
 
 to_repair=()
 for i in "${keyspaces[@]}"; do
@@ -121,7 +138,7 @@ if [ ${#to_repair[@]} -eq 0 ]; then
     echo "No keyspaces processed!"
     ret_code=1
 else
-    #cat $CQL_FILE
+    cat $CQL_FILE
     echo "Please execute command 'cqlsh -f $CQL_FILE' to adjust replication factor for keyspaces"
     echo "After that, execute following commands on each node of the cluster:"
     for i in "${to_repair[@]}" ; do
@@ -130,6 +147,6 @@ else
 fi
 
 # remove already processed files
-rm -f $SCHEMA_FILE $DSETOOL_FILE
+rm -f $SCHEMA_FILE $NODETOOL_FILE
 
 exit $ret_code
