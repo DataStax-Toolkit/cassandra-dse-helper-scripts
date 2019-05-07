@@ -7,7 +7,7 @@
 
 rep_factor=3
 fix_system=1
-keyspaces=("system_auth" "system_distributed"  "dse_security" "solr_admin" "dse_perf" "dse_leases" "dse_analytics" "dsefs" '"HiveMetaStore"')
+keyspaces=("system_auth" "system_distributed"  "dse_security" "solr_admin" "dse_perf" "dse_leases" "dse_analytics" "dsefs" '"HiveMetaStore"' "cfs" "cfs_archive" "system_traces" "dse_advrep")
 
 function usage() {
     echo "Usage: $0 [-n replication_factor] [keyspace]"
