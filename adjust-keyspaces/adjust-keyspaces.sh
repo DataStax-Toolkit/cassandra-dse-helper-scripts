@@ -8,18 +8,24 @@
 rep_factor=3
 fix_system=1
 keyspaces=("system_auth" "system_distributed"  "dse_security" "solr_admin" "dse_perf" "dse_leases" "dse_analytics" "dsefs" '"HiveMetaStore"' "cfs" "cfs_archive" "system_traces" "dse_advrep")
+cqlsh_options=""
+nodetool_options=""
 
 function usage() {
-    echo "Usage: $0 [-n replication_factor] [keyspace]"
+    echo "Usage: $0 [-n replication_factor] [-c cqlsh_options_as_a_string] [-o nodetool_options_as_a_string] [keyspace]"
     echo "Defaults:"
     echo "   replication_factor = $rep_factor"
     echo "   keyspace = name of keyspace to fix replication factor."
     echo "              fix for system keyspaces if not specified"
 }
 
-while getopts ":ht:n:" opt; do
+while getopts ":hc:o:n:" opt; do
     case $opt in
         n) rep_factor=$OPTARG
+           ;;
+        c) cqlsh_options=$OPTARG
+           ;;
+        o) nodetool_options=$OPTARG
            ;;
         h) usage
            exit 0
@@ -45,7 +51,7 @@ CQL_FILE=/tmp/fix-keyspaces-${my_pid}.cql
 rm -f $CQL_FILE
 touch $CQL_FILE
 
-nodetool status > $NODETOOL_FILE
+nodetool $nodetool_options status > $NODETOOL_FILE
 RES=$?
 if [ $RES -ne 0 ] ; then
     echo "Can't execute 'dsetool status'! Exit code: $?"
@@ -57,7 +63,7 @@ if cat $NODETOOL_FILE|grep -e '^[UD][NJLM] '|grep -v -e '^UN ' > /dev/null 2>&1 
     exit 1
 fi
 
-cqlsh -e 'DESCRIBE FULL SCHEMA;' > $SCHEMA_FILE
+cqlsh $cqlsh_options -e 'DESCRIBE FULL SCHEMA;' > $SCHEMA_FILE
 RES=$?
 if [ $RES -ne 0 ] ; then
     echo "Can't get schema via cqlsh! Exit code: $?"
@@ -114,7 +120,6 @@ if [ ${#all_dcs[@]} -eq 0 ]; then
     exit 1
 fi
 
-
 to_repair=()
 for i in "${keyspaces[@]}"; do
 #    echo "Processing $i"
@@ -139,10 +144,10 @@ if [ ${#to_repair[@]} -eq 0 ]; then
     ret_code=1
 else
 #    cat $CQL_FILE
-    echo "Please execute command 'cqlsh -f $CQL_FILE' to adjust replication factor for keyspaces"
+    echo "Please execute command 'cqlsh $cqlsh_options -f $CQL_FILE' to adjust replication factor for keyspaces"
     echo "After that, execute following commands on each node of the cluster:"
     for i in "${to_repair[@]}" ; do
-        echo "nodetool repair -pr $i"
+        echo "nodetool $nodetool_options repair -pr $i"
     done
 fi
 
