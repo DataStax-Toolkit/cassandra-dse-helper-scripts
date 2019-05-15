@@ -12,11 +12,11 @@ cqlsh_options=""
 nodetool_options=""
 
 function usage() {
-    echo "Usage: $0 [-n replication_factor] [-c cqlsh_options_as_a_string] [-o nodetool_options_as_a_string] [keyspace]"
+    echo "Usage: $0 [-n replication_factor] [-c cqlsh_options_as_a_string] [-o nodetool_options_as_a_string] [keyspace1 keyspace2 ...]"
     echo "Defaults:"
     echo "   replication_factor = $rep_factor"
-    echo "   keyspace = name of keyspace to fix replication factor."
-    echo "              fix for system keyspaces if not specified"
+    echo "   keyspace1.. = name(s) of keyspace(s) to fix replication factor."
+    echo "                 fix all system keyspaces if not specified"
 }
 
 while getopts ":hc:o:n:" opt; do
@@ -34,10 +34,12 @@ while getopts ":hc:o:n:" opt; do
 done
 shift "$(($OPTIND -1))"
 
-ksname="${1:-}"
-if [ -n "$ksname" ] ; then
-    keyspaces=($ksname)
+if [ $# -ne 0 ] ; then
+    keyspaces=()
     fix_system=0
+    for ks in "$@" ; do
+        keyspaces+=($ks)
+    done
 fi    
 
 my_pid=$$
@@ -144,7 +146,7 @@ if [ ${#to_repair[@]} -eq 0 ]; then
     ret_code=1
 else
 #    cat $CQL_FILE
-    echo "Please execute command 'cqlsh $cqlsh_options -f $CQL_FILE' to adjust replication factor for keyspaces"
+    echo "Please execute command 'cqlsh -f $CQL_FILE $cqlsh_options' to adjust replication factor for keyspaces"
     echo "After that, execute following commands on each node of the cluster:"
     for i in "${to_repair[@]}" ; do
         echo "nodetool $nodetool_options repair -pr $i"
