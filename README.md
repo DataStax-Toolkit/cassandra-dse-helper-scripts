@@ -3,5 +3,5 @@ their maintenance.
 
 What is included:
 
-* `adjust-keyspaces` - script that helps to adjust replication factor of Cassandra/DSE
+* [adjust-keyspaces](adjust-keyspaces) - script that helps to adjust replication factor of Cassandra/DSE
   system (or user-provided) keyspaces based on current cluster topology;
