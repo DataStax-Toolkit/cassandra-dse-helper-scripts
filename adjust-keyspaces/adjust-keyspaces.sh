@@ -1,6 +1,7 @@
 #!/bin/bash
 #
 # File: adjust-keyspaces.sh
+# Author: Alex Ott
 #
 # Created: Friday, May  3 2019
 #
@@ -30,15 +31,28 @@ while getopts ":hc:o:n:" opt; do
         h) usage
            exit 0
            ;;
+        *) usage
+           exit 1
+           ;;
     esac
 done
-shift "$(($OPTIND -1))"
+shift "$((OPTIND -1))"
+
+if [ -z "$(command -v nodetool)" ]; then
+    echo "Can't find nodetool in the PATH"
+    exit 1
+fi
+
+if [ -z "$(command -v cqlsh)" ]; then
+    echo "Can't find nodetool in the PATH"
+    exit 1
+fi
 
 if [ $# -ne 0 ] ; then
     keyspaces=()
     fix_system=0
     for ks in "$@" ; do
-        keyspaces+=($ks)
+        keyspaces+=("$ks")
     done
 fi    
 
@@ -46,7 +60,6 @@ my_pid=$$
 
 NODETOOL_FILE=/tmp/nodetool-out-${my_pid}.txt
 SCHEMA_FILE=/tmp/cqlsh-schema-${my_pid}.txt
-TMP_FILE=/tmp/tmp-${my_pid}.txt
 
 # File with commands to execute
 CQL_FILE=/tmp/fix-keyspaces-${my_pid}.cql
@@ -60,7 +73,7 @@ if [ $RES -ne 0 ] ; then
     exit 1
 fi
     
-if cat $NODETOOL_FILE|grep -e '^[UD][NJLM] '|grep -v -e '^UN ' > /dev/null 2>&1 ; then
+if grep -e '^[UD][NJLM] ' "$NODETOOL_FILE"|grep -v -e '^UN ' > /dev/null 2>&1 ; then
     echo "Cluster has nodes with non-UN status, can't adjust replication factor!"
     exit 1
 fi
@@ -73,7 +86,7 @@ if [ $RES -ne 0 ] ; then
 fi
 
 declare -A all_ks
-for i in `cat $SCHEMA_FILE|grep 'CREATE KEYSPACE'|grep -e 'SimpleStrategy\|NetworkTopologyStrategy'|sed -e 's|^CREATE KEYSPACE \([^ ]*\).*$|\1|'`; do
+for i in $(grep 'CREATE KEYSPACE' "$SCHEMA_FILE"|grep -e 'SimpleStrategy\|NetworkTopologyStrategy'|sed -e 's|^CREATE KEYSPACE \([^ ]*\).*$|\1|'); do
     all_ks[$i]=1
 done
 #echo "All keyspaces=${!all_ks[@]}"
@@ -85,7 +98,7 @@ cnt=0
 while read -d $'\n' line ; do
 #    echo "$line"
     if echo "$line"|grep -e '^Datacenter: '  > /dev/null 2>&1 ; then
-        new_dc=`echo "$line"|sed -e 's|^Datacenter: \([^ ]*\).*$|\1|'`
+        new_dc=$(echo "$line"|sed -e 's|^Datacenter: \([^ ]*\).*$|\1|')
 #        echo "new_dc=$new_dc"
         if [ -z "$new_dc" ] ; then
             echo "Can't extract DC from line '$line'"
@@ -136,7 +149,7 @@ for i in "${keyspaces[@]}"; do
         echo -n ", '$key': ${all_dcs[$key]}" >> $CQL_FILE
     done
     echo "};" >> $CQL_FILE
-    to_repair+=($i)
+    to_repair+=("$i")
 done
 
 ret_code=0
@@ -145,7 +158,6 @@ if [ ${#to_repair[@]} -eq 0 ]; then
     echo "No keyspaces processed!"
     ret_code=1
 else
-#    cat $CQL_FILE
     echo "Please execute command 'cqlsh -f $CQL_FILE $cqlsh_options' to adjust replication factor for keyspaces"
     echo "After that, execute following commands on each node of the cluster:"
     for i in "${to_repair[@]}" ; do
